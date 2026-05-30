@@ -1,0 +1,33 @@
+# ============================================================
+# Contexto de build de Docker.
+# Estrategia: excluir TODO y re-incluir solo los artefactos que
+# los Dockerfile de src/main/docker/ realmente copian.
+# Asi la imagen no arrastra src/, .git, .idea, .mvn, etc.
+# Requiere haber ejecutado './mvnw package' antes del build.
+# ============================================================
+
+# 1) Excluir todo el contexto por defecto
+*
+
+# 2) Re-incluir artefactos JVM (Dockerfile.jvm / Dockerfile.legacy-jar)
+#    Copian target/quarkus-app/{lib,app,quarkus,*.jar}
+!target/quarkus-app/
+!target/quarkus-app/**
+
+# 3) Re-incluir uber-jar / layout legacy
+!target/*-runner.jar
+!target/lib/
+!target/lib/**
+
+# 4) Re-incluir ejecutable nativo (Dockerfile.native / native-micro)
+!target/*-runner
+
+# ------------------------------------------------------------
+# Por seguridad, nunca enviar secretos al contexto aunque
+# alguna regla anterior los re-incluyera.
+# ------------------------------------------------------------
+.env
+.env.*
+**/*.pem
+**/*.key
+.certs/

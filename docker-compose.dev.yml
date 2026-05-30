@@ -1,0 +1,77 @@
+version: '3.8'
+
+# ============================================================
+# DEVELOPMENT - cooponboard (API Quarkus)
+# ------------------------------------------------------------
+# Servicios de infraestructura (composes aparte, repo itilsupport):
+#   - PostgreSQL : itilsupport_postgres  (carpeta Postgres/)
+#   - Keycloak   : itilsupport_keycloak  (carpeta Keycloak/)
+#   - Vault      : vault-server          (carpeta Vault/)
+#   - MinIO      : minio-server          (carpeta Minio/)
+# Todos comparten la red externa itilsupport_network_dev, por lo
+# que aqui se les llama por NOMBRE DE CONTENEDOR (no host.docker.internal).
+# ------------------------------------------------------------
+# Pre-requisitos:
+#   1. ./mvnw package           (genera target/quarkus-app/ que copia el Dockerfile)
+#   2. docker network create itilsupport_network_dev   (si no existe)
+#   3. Postgres y Keycloak levantados.
+# Uso:
+#   docker compose -f docker-compose.dev.yml up -d --build
+# ============================================================
+
+services:
+
+  cooponboard:
+    build:
+      context: .
+      dockerfile: src/main/docker/Dockerfile.jvm
+    image: cooponboard:dev
+    container_name: cooponboard_dev
+    restart: unless-stopped
+    environment:
+      # --- Perfil ---
+      QUARKUS_PROFILE: ${QUARKUS_PROFILE:-dev}
+
+      # --- HTTP ---
+      QUARKUS_HTTP_HOST: 0.0.0.0
+      QUARKUS_HTTP_PORT: 8080
+
+      # --- Datasource PostgreSQL (extension ya presente) ---
+      QUARKUS_DATASOURCE_DB_KIND: postgresql
+      QUARKUS_DATASOURCE_USERNAME: ${DB_USER:-itil}
+      QUARKUS_DATASOURCE_PASSWORD: ${DB_PASSWORD:-itil}
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://itilsupport_postgres:5432/${DB_NAME:-itilsupport}
+      QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION: ${DB_DDL:-update}
+
+      # --- Debug remoto (JDWP) ---
+      JAVA_DEBUG: "true"
+      JAVA_DEBUG_PORT: "*:5005"
+
+      # ========================================================
+      # Las siguientes requieren agregar su extension Quarkus
+      # antes de tener efecto. Se dejan listas y documentadas.
+      # ========================================================
+      # --- Keycloak / OIDC  (mvn: quarkus-oidc) ---
+      # QUARKUS_OIDC_AUTH_SERVER_URL: http://itilsupport_keycloak:8080/realms/${OIDC_REALM:-cooponboard}
+      # QUARKUS_OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-cooponboard}
+      # QUARKUS_OIDC_CREDENTIALS_SECRET: ${OIDC_CLIENT_SECRET:-change-me}
+      #
+      # --- Vault  (mvn: quarkus-vault) ---
+      # QUARKUS_VAULT_URL: http://vault-server:8200
+      # QUARKUS_VAULT_AUTHENTICATION_USERPASS_USERNAME: ${VAULT_USERNAME:-helpdesk-reader}
+      # QUARKUS_VAULT_AUTHENTICATION_USERPASS_PASSWORD: ${VAULT_PASSWORD:-R3ad3r_S3cur3!2026}
+      #
+      # --- MinIO  (mvn: quarkus-minio) ---
+      # QUARKUS_MINIO_URL: http://minio-server:9000
+      # QUARKUS_MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      # QUARKUS_MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin123}
+    ports:
+      - "${APP_PORT:-8082}:8080"   # 8080 lo ocupa itilsupport_backend_dev
+      - "${DEBUG_PORT:-5006}:5005" # 5005 lo ocupa itilsupport_backend_dev
+    networks:
+      - itilsupport_network_dev
+
+networks:
+  itilsupport_network_dev:
+    name: itilsupport_network_dev
+    external: true
