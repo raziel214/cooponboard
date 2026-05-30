@@ -1,0 +1,77 @@
+# ============================================================
+# cooponboard - configuracion Quarkus (YAML)
+# Requiere la extension quarkus-config-yaml.
+#
+# Fuentes de config (mayor prioridad gana):
+#   variables de entorno (compose)  >  Vault  >  application.yml
+#
+# Secretos (credenciales de Postgres y MinIO) se OBTIENEN DE VAULT:
+#   path KV: secret/dev/cooponboard/app
+#   claves : quarkus.datasource.username/password,
+#            quarkus.minio.access-key/secret-key
+# Aqui NO se ponen credenciales; solo URLs y defaults de DEV.
+# OJO: YAML usa 2 espacios de indentacion, nunca tabs.
+# ============================================================
+quarkus:
+  application:
+    name: cooponboard
+
+  http:
+    port: 8080
+
+  # --- OpenAPI / Swagger UI (extension quarkus-smallrye-openapi) ---
+  # Spec:       /q/openapi      UI: /q/swagger-ui
+  smallrye-openapi:
+    info-title: cooponboard API
+    info-version: 1.0.0-SNAPSHOT
+    info-description: API de onboarding del ecosistema itilsupport.
+    info-contact-name: John Fredy Quimbaya Orozco
+    info-contact-url: https://www.linkedin.com/in/jfqo/
+  swagger-ui:
+    always-include: true   # tambien disponible en prod (no solo en dev)
+
+  # --- Persistencia PostgreSQL (credenciales via Vault) ---
+  datasource:
+    db-kind: postgresql
+  hibernate-orm:
+    database:
+      generation: update
+
+  # --- Seguridad: OIDC contra Keycloak (modo service = valida JWT Bearer) ---
+  oidc:
+    application-type: service
+    client-id: cooponboard
+  # Usamos nuestro Keycloak, no el Dev Service automatico
+  keycloak:
+    devservices:
+      enabled: false
+
+  # --- MinIO (url aqui; access-key/secret-key via Vault) ---
+  # quarkus.minio.url se define por perfil/entorno mas abajo.
+
+  # --- Vault: fuente de secretos ---
+  vault:
+    kv-secret-engine-version: 2
+    kv-secret-engine-mount-path: secret
+    secret-config-kv-path: dev/cooponboard/app
+    authentication:
+      userpass:
+        username: ${VAULT_USERNAME:cooponboard}
+        password: ${VAULT_PASSWORD:}   # sin default; viene de .env / entorno
+
+# ------------------------------------------------------------
+# DEV local ('mvnw quarkus:dev' corre en el host -> localhost).
+# En contenedor, el compose inyecta las URLs por variables de
+# entorno (QUARKUS_*) apuntando a los nombres de contenedor.
+# ------------------------------------------------------------
+"%dev":
+  quarkus:
+    datasource:
+      jdbc:
+        url: jdbc:postgresql://localhost:5432/itilsupport
+    oidc:
+      auth-server-url: http://localhost:8081/realms/cooponboard
+    minio:
+      url: http://localhost:9000
+    vault:
+      url: http://localhost:8200

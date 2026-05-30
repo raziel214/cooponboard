@@ -36,35 +36,25 @@ services:
       QUARKUS_HTTP_HOST: 0.0.0.0
       QUARKUS_HTTP_PORT: 8080
 
-      # --- Datasource PostgreSQL (extension ya presente) ---
-      QUARKUS_DATASOURCE_DB_KIND: postgresql
-      QUARKUS_DATASOURCE_USERNAME: ${DB_USER:-itil}
-      QUARKUS_DATASOURCE_PASSWORD: ${DB_PASSWORD:-itil}
+      # --- Datasource PostgreSQL (SOLO la URL; credenciales via Vault) ---
       QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://itilsupport_postgres:5432/${DB_NAME:-itilsupport}
       QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION: ${DB_DDL:-update}
+
+      # --- Vault: fuente de secretos (Postgres + MinIO) ---
+      QUARKUS_VAULT_URL: http://vault-server:8200
+      VAULT_USERNAME: ${VAULT_USERNAME:-cooponboard}
+      VAULT_PASSWORD: ${VAULT_PASSWORD:?VAULT_PASSWORD es requerido (ver .env)}
+
+      # --- Keycloak / OIDC (modo service: valida JWT Bearer) ---
+      QUARKUS_OIDC_AUTH_SERVER_URL: http://itilsupport_keycloak:8080/realms/${OIDC_REALM:-cooponboard}
+      QUARKUS_OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-cooponboard}
+
+      # --- MinIO (url aqui; access-key/secret-key via Vault) ---
+      QUARKUS_MINIO_URL: http://minio-server:9000
 
       # --- Debug remoto (JDWP) ---
       JAVA_DEBUG: "true"
       JAVA_DEBUG_PORT: "*:5005"
-
-      # ========================================================
-      # Las siguientes requieren agregar su extension Quarkus
-      # antes de tener efecto. Se dejan listas y documentadas.
-      # ========================================================
-      # --- Keycloak / OIDC  (mvn: quarkus-oidc) ---
-      # QUARKUS_OIDC_AUTH_SERVER_URL: http://itilsupport_keycloak:8080/realms/${OIDC_REALM:-cooponboard}
-      # QUARKUS_OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-cooponboard}
-      # QUARKUS_OIDC_CREDENTIALS_SECRET: ${OIDC_CLIENT_SECRET:-change-me}
-      #
-      # --- Vault  (mvn: quarkus-vault) ---
-      # QUARKUS_VAULT_URL: http://vault-server:8200
-      # QUARKUS_VAULT_AUTHENTICATION_USERPASS_USERNAME: ${VAULT_USERNAME:-helpdesk-reader}
-      # QUARKUS_VAULT_AUTHENTICATION_USERPASS_PASSWORD: ${VAULT_PASSWORD:-R3ad3r_S3cur3!2026}
-      #
-      # --- MinIO  (mvn: quarkus-minio) ---
-      # QUARKUS_MINIO_URL: http://minio-server:9000
-      # QUARKUS_MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
-      # QUARKUS_MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin123}
     ports:
       - "${APP_PORT:-8082}:8080"   # 8080 lo ocupa itilsupport_backend_dev
       - "${DEBUG_PORT:-5006}:5005" # 5005 lo ocupa itilsupport_backend_dev

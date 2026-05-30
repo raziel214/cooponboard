@@ -102,7 +102,7 @@ cooponboard/
     │   │   └── MyEntity.java           # Entidad JPA/Panache de ejemplo
     │   │
     │   ├── resources/
-    │   │   ├── application.properties  # Configuración de la app (datasource, etc.)
+    │   │   ├── application.yml          # Configuración de la app (datasource, perfiles)
     │   │   └── import.sql               # SQL de carga inicial (modo dev/test)
     │   │
     │   └── docker/                      # Plantillas de imagen generadas por Quarkus
@@ -125,7 +125,7 @@ cooponboard/
 - **Entidades** usan Hibernate ORM con Panache.
 - **Tests:** `*Test` corren en JVM (`@QuarkusTest`); `*IT` son de integración
   (`@QuarkusIntegrationTest`) y se ejecutan en la fase `verify`.
-- **Configuración** centralizada en `application.properties`; los valores sensibles
+- **Configuración** centralizada en `application.yml` (extensión `quarkus-config-yaml`); los valores sensibles
   y específicos de entorno se inyectan por variables de entorno (ver `.env.example`).
 
 ---
@@ -166,29 +166,44 @@ URLs útiles:
 Copiar `.env.example` a `.env` y ajustar. Las claves relevantes:
 
 - `APP_PORT` / `DEBUG_PORT` — puertos publicados al host.
-- `DB_NAME` / `DB_USER` / `DB_PASSWORD` — deben coincidir con `itilsupport/Postgres/.env`.
-- `DB_DDL` — estrategia de Hibernate (`update`, `validate`, `none`, …).
-- `OIDC_*`, `VAULT_*`, `MINIO_*` — listas para cuando se agreguen sus extensiones (ver roadmap).
+- `DB_NAME` / `DB_DDL` — nombre de la BD y estrategia de Hibernate. **Las credenciales de la BD NO van aquí: viven en Vault.**
+- `VAULT_USERNAME` / `VAULT_PASSWORD` — credencial del usuario `cooponboard` (solo-lectura) con que la app se autentica en Vault. `VAULT_PASSWORD` es obligatorio y **no se versiona**.
+- `OIDC_REALM` / `OIDC_CLIENT_ID` — realm y client de Keycloak.
 
 ---
 
-## Roadmap de integración
+## Gestión de secretos (Vault)
 
-Extensiones presentes hoy: `quarkus-rest`, `quarkus-rest-jackson`,
-`quarkus-hibernate-orm-panache`, `quarkus-jdbc-postgresql`.
+Las **credenciales de PostgreSQL y MinIO no se guardan** en `application.yml`,
+`docker-compose.dev.yml` ni `.env`. Se obtienen en runtime desde **Vault**:
 
-Pendientes de agregar para completar la arquitectura (las variables ya están
-preparadas y comentadas en `docker-compose.dev.yml`):
+| Ítem | Valor |
+|---|---|
+| Path KV (v2) | `secret/dev/cooponboard/app` |
+| Claves | `quarkus.datasource.username/password`, `quarkus.minio.access-key/secret-key` |
+| Política | `cooponboard-reader` (solo lectura sobre `dev/cooponboard/*`) |
+| Usuario app | `cooponboard` (auth `userpass`) |
 
-```bash
-./mvnw quarkus:add-extension -Dextensions="oidc"     # Keycloak / seguridad
-./mvnw quarkus:add-extension -Dextensions="vault"    # secretos
-./mvnw quarkus:add-extension -Dextensions="minio"    # almacenamiento de objetos
-./mvnw quarkus:add-extension -Dextensions="smallrye-health"  # /q/health
-```
+La app se autentica en Vault con `VAULT_USERNAME`/`VAULT_PASSWORD` y Quarkus
+expone esas claves del KV como configuración (extensión `quarkus-vault`,
+`quarkus.vault.secret-config-kv-path`), resolviendo `quarkus.datasource.*` y
+`quarkus.minio.*` directamente desde Vault.
 
-Al agregar cada extensión, descomentar el bloque correspondiente en
-`docker-compose.dev.yml`.
+> Para rotar credenciales basta con actualizar el secreto en Vault; no hay que
+> tocar el código ni reconstruir la imagen.
+
+## Seguridad (Keycloak / OIDC)
+
+La API valida tokens **JWT Bearer** emitidos por Keycloak (`quarkus-oidc` en modo
+`service`). Pasos pendientes en Keycloak para poder autenticar:
+
+1. Crear el realm `cooponboard`.
+2. Crear un client `cooponboard`.
+3. Definir roles y asignarlos a usuarios.
+4. Proteger endpoints con `@RolesAllowed` / `@Authenticated`.
+
+Mientras el realm no exista, la API arranca pero las rutas protegidas
+rechazarán las peticiones.
 
 ---
 
@@ -202,8 +217,9 @@ Al agregar cada extensión, descomentar el bloque correspondiente en
 
 > Quarkus incluye una Dev UI disponible solo en modo dev en <http://localhost:8080/q/dev/>.
 
-En modo dev local, configura el datasource en `src/main/resources/application.properties`
-apuntando a `localhost:5432` (en vez del nombre de contenedor).
+En modo dev local, el datasource ya apunta a `localhost:5432` mediante el perfil
+`%dev` en `src/main/resources/application.yml` (en el contenedor, el compose lo
+sobreescribe con el nombre de contenedor `itilsupport_postgres`).
 
 ### Empaquetado
 

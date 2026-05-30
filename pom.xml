@@ -53,7 +53,28 @@
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-config-yaml</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
             <artifactId>quarkus-hibernate-orm</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-smallrye-openapi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-oidc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkiverse.vault</groupId>
+            <artifactId>quarkus-vault</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkiverse.minio</groupId>
+            <artifactId>quarkus-minio</artifactId>
+            <version>3.8.6</version>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>
