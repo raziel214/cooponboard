@@ -268,7 +268,7 @@ Más de 9 años diseñando e implementando soluciones tecnológicas en los secto
 financiero y de salud, con foco en arquitectura de microservicios, seguridad
 (OAuth2/OIDC), nube (AWS) y modernización de plataformas.
 
-- LinkedIn: [John Fredy Quimbaya Orozco](https://www.linkedin.com/in/john-fredy-quimbaya-orozco)
+- LinkedIn: [John Fredy Quimbaya Orozco](https://www.linkedin.com/in/jfqo/)
 - Email: 94041671@u.icesi.edu.co
 
 ## Licencia
