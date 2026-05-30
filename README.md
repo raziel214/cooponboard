@@ -46,6 +46,25 @@ todos orquestados con Docker Compose sobre una red común.
 > El backend Spring `itilsupport_backend_dev` ocupa **8080** y **5005**; por eso
 > `cooponboard` usa **8082** y **5006**.
 
+### Componentes externos (de terceros)
+
+`cooponboard` **no reimplementa** infraestructura: se **integra** con software de
+terceros que corre como servicios independientes (contenedores propios). Este
+proyecto solo aporta el código de la API; cada componente externo conserva su
+**propia licencia** y no queda cubierto por la licencia MIT de este repositorio.
+
+| Componente | Para qué lo usamos | Proveedor | Licencia del componente |
+|---|---|---|---|
+| **PostgreSQL** | Persistencia relacional de la API (y BD de Keycloak) | PostgreSQL Global Development Group | PostgreSQL License (tipo BSD) |
+| **Keycloak** | Gestión de identidades, autenticación y autorización (OIDC/OAuth2) | Red Hat / CNCF | Apache License 2.0 |
+| **HashiCorp Vault** | Gestión y entrega segura de secretos (credenciales, claves) | HashiCorp | Business Source License 1.1 |
+| **MinIO** | Almacenamiento de objetos compatible con S3 | MinIO Inc. | GNU AGPL v3 |
+
+> **Importante para uso público:** la licencia MIT de este repo aplica **solo al
+> código de `cooponboard`**. Si distribuyes o despliegas el stack completo, revisa
+> y respeta las licencias de cada componente externo (en particular MinIO bajo
+> **AGPL v3** y Vault bajo **BSL 1.1**, que imponen condiciones específicas).
+
 ### Modelo de red
 
 Todos los servicios comparten la red Docker externa **`itilsupport_network_dev`**.
@@ -58,6 +77,56 @@ contenedor** (DNS interno de Docker), sin depender de `host.docker.internal`:
 | Keycloak (OIDC) | `http://itilsupport_keycloak:8080/realms/<realm>` |
 | Vault | `http://vault-server:8200` |
 | MinIO | `http://minio-server:9000` |
+
+---
+
+## Estructura del proyecto
+
+```
+cooponboard/
+├── pom.xml                     # Maven + BOM de Quarkus, dependencias y plugins
+├── mvnw / mvnw.cmd             # Maven Wrapper (no requiere Maven instalado)
+├── .mvn/                       # Configuración del wrapper
+│
+├── docker-compose.dev.yml      # Orquestación DEV (servicio cooponboard + red compartida)
+├── .env.example                # Plantilla de variables de entorno (copiar a .env)
+├── .dockerignore               # Acota el contexto de build de la imagen
+├── .gitignore                  # Exclusiones de control de versiones
+├── LICENSE                     # Licencia MIT
+├── README.md                   # Este documento
+│
+└── src/
+    ├── main/
+    │   ├── java/com/quimbaya/cooponboard/
+    │   │   ├── GreetingResource.java   # Endpoint REST de ejemplo (JAX-RS)
+    │   │   └── MyEntity.java           # Entidad JPA/Panache de ejemplo
+    │   │
+    │   ├── resources/
+    │   │   ├── application.properties  # Configuración de la app (datasource, etc.)
+    │   │   └── import.sql               # SQL de carga inicial (modo dev/test)
+    │   │
+    │   └── docker/                      # Plantillas de imagen generadas por Quarkus
+    │       ├── Dockerfile.jvm           # JAR sobre JVM (default, usado por el compose)
+    │       ├── Dockerfile.native        # Binario nativo GraalVM
+    │       ├── Dockerfile.native-micro  # Nativo sobre imagen base mínima
+    │       └── Dockerfile.legacy-jar    # Fat-jar clásico (compatibilidad)
+    │
+    └── test/
+        └── java/com/quimbaya/cooponboard/
+            ├── GreetingResourceTest.java   # Test unitario/funcional (@QuarkusTest)
+            └── GreetingResourceIT.java     # Test de integración (@QuarkusIntegrationTest)
+```
+
+### Convenciones
+
+- **Paquete base:** `com.quimbaya.cooponboard`. Organiza por capas o por feature dentro de él
+  (p. ej. `.../domain`, `.../rest`, `.../service`, `.../repository`).
+- **Recursos REST** terminan en `Resource` (estilo Quarkus/JAX-RS).
+- **Entidades** usan Hibernate ORM con Panache.
+- **Tests:** `*Test` corren en JVM (`@QuarkusTest`); `*IT` son de integración
+  (`@QuarkusIntegrationTest`) y se ejecutan en la fase `verify`.
+- **Configuración** centralizada en `application.properties`; los valores sensibles
+  y específicos de entorno se inyectan por variables de entorno (ver `.env.example`).
 
 ---
 
@@ -187,3 +256,27 @@ Quarkus genera plantillas en `src/main/docker/`:
 - OIDC (Keycloak): <https://quarkus.io/guides/security-oidc-bearer-token-authentication>
 - Vault: <https://docs.quarkiverse.io/quarkus-vault/dev/>
 - MinIO: <https://docs.quarkiverse.io/quarkus-minio/dev/>
+
+---
+
+## Autor
+
+**John Fredy Quimbaya Orozco**
+Magíster en Gerencia de Tecnologías de Información · Arquitecto de Soluciones · Líder Técnico
+
+Más de 9 años diseñando e implementando soluciones tecnológicas en los sectores
+financiero y de salud, con foco en arquitectura de microservicios, seguridad
+(OAuth2/OIDC), nube (AWS) y modernización de plataformas.
+
+- LinkedIn: [John Fredy Quimbaya Orozco](https://www.linkedin.com/in/john-fredy-quimbaya-orozco)
+- Email: 94041671@u.icesi.edu.co
+
+## Licencia
+
+Distribuido bajo la licencia **MIT**. Consulta el archivo [LICENSE](LICENSE) para el texto completo.
+
+Copyright (c) 2026 John Fredy Quimbaya Orozco
+
+> La licencia MIT cubre únicamente el código fuente de `cooponboard`. Los
+> componentes externos (PostgreSQL, Keycloak, Vault, MinIO) se rigen por sus
+> respectivas licencias — ver [Componentes externos](#componentes-externos-de-terceros).
