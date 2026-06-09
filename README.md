@@ -17,12 +17,12 @@ todos orquestados con Docker Compose sobre una red común.
    │   │  cooponboard │  OIDC  │  itilsupport_     │      │ vault-server  │  │
    │   │  (Quarkus)   ├───────►│  keycloak         │      │ (secretos)    │  │
    │   │              │        └────────┬─────────┘      └───────┬───────┘  │
-   │   │   :8080      │                 │ JDBC                   │           │
+   │   │   :8090      │                 │ JDBC                   │           │
    │   │              │   JDBC          ▼                        │ secretos  │
    │   │              ├──────►┌──────────────────┐               │           │
-   │   │              │       │ itilsupport_     │◄──────────────┘           │
-   │   │              │       │ postgres  :5432  │                           │
-   │   │              │       │  · itilsupport   │                           │
+   │   │              │       │ shared_postgres  │◄──────────────┘           │
+   │   │              │       │           :5432  │                           │
+   │   │              │       │  · cooponboard   │                           │
    │   │              │       │  · keycloak      │                           │
    │   │              │  S3   └──────────────────┘                           │
    │   │              ├──────►┌──────────────────┐                           │
@@ -37,14 +37,14 @@ todos orquestados con Docker Compose sobre una red común.
 
 | Servicio | Contenedor | Imagen | Puerto host | Rol | Compose |
 |---|---|---|---|---|---|
-| **cooponboard** | `cooponboard_dev` | `cooponboard:dev` (build local) | `8082` (+ `5006` debug) | API REST de negocio | `docker-compose.dev.yml` (este repo) |
-| **PostgreSQL** | `itilsupport_postgres` | `postgres:16` | `5432` | BD de la app + BD de Keycloak | `itilsupport/Postgres/` |
+| **cooponboard** | `cooponboard_dev` | `cooponboard:dev` (build local) | `8090` (+ `5006` debug) | API REST de negocio | `docker-compose.dev.yml` (este repo) |
+| **PostgreSQL** | `shared_postgres` | `postgres:16` | `5432` | Servidor compartido: BD `cooponboard` + BD `keycloak` | `itilsupport/Postgres/` |
 | **Keycloak** | `itilsupport_keycloak` | `keycloak:26.0` | `8081` | Identidades / OIDC | `itilsupport/Keycloak/` |
 | **Vault** | `vault-server` | `hashicorp/vault` | `8200` | Gestión de secretos | `itilsupport/Vault/` |
 | **MinIO** | `minio-server` | `minio/minio` | `9000` / `9001` | Almacenamiento de objetos (S3) | `itilsupport/Minio/` |
 
-> El backend Spring `itilsupport_backend_dev` ocupa **8080** y **5005**; por eso
-> `cooponboard` usa **8082** y **5006**.
+> El backend Spring ocupa **8080**/**5005** y Keycloak **8081**; por eso
+> `cooponboard` usa **8090** y **5006**.
 
 ### Componentes externos (de terceros)
 
@@ -73,8 +73,8 @@ contenedor** (DNS interno de Docker), sin depender de `host.docker.internal`:
 
 | Dependencia | URL interna (desde cooponboard) |
 |---|---|
-| PostgreSQL | `jdbc:postgresql://itilsupport_postgres:5432/itilsupport` |
-| Keycloak (OIDC) | `http://itilsupport_keycloak:8080/realms/<realm>` |
+| PostgreSQL | `jdbc:postgresql://shared_postgres:5432/cooponboard` |
+| Keycloak (OIDC) | `http://itilsupport_keycloak:8080/realms/internos-dev` |
 | Vault | `http://vault-server:8200` |
 | MinIO | `http://minio-server:9000` |
 
@@ -151,12 +151,12 @@ Verificación:
 
 ```bash
 docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
-curl http://localhost:8082/q/health              # health de la API (si se añade smallrye-health)
+curl http://localhost:8090/q/health              # health de la API (si se añade smallrye-health)
 ```
 
 URLs útiles:
 
-- API cooponboard → <http://localhost:8082>
+- API cooponboard → <http://localhost:8090> (Swagger UI: <http://localhost:8090/q/swagger-ui>)
 - Consola Keycloak → <http://localhost:8081> (admin / admin)
 - Consola MinIO → <http://localhost:9001> (minioadmin / minioadmin123)
 - UI de Vault → <http://localhost:8200>
@@ -195,14 +195,28 @@ expone esas claves del KV como configuración (extensión `quarkus-vault`,
 ## Seguridad (Keycloak / OIDC)
 
 La API valida tokens **JWT Bearer** emitidos por Keycloak (`quarkus-oidc` en modo
-`service`). Pasos pendientes en Keycloak para poder autenticar:
+`service`).
 
-1. Crear el realm `cooponboard`.
-2. Crear un client `cooponboard`.
-3. Definir roles y asignarlos a usuarios.
-4. Proteger endpoints con `@RolesAllowed` / `@Authenticated`.
+**Modelo de realms (enterprise):** el realm es una **frontera de seguridad por
+ambiente + población**, no por aplicación. Aquí:
 
-Mientras el realm no exista, la API arranca pero las rutas protegidas
+- **Realm `internos-dev`** = población *internos* (empleados) en el ambiente *dev*.
+  Se replica como `internos-qa` / `internos-prod` (idealmente en instancias de
+  Keycloak separadas).
+- `cooponboard` aporta **clients** dentro del realm, no un realm propio:
+  - `cooponboard-api` → resource server / audience (`aud=cooponboard-api`).
+  - `cooponboard-spa` → front (público + PKCE).
+- Si en el futuro hay clientes **B2C**, van en un realm aparte (`customers-*`),
+  nunca mezclados con los internos.
+
+Pasos pendientes en Keycloak (realm `internos-dev`):
+
+1. Crear el client `cooponboard-api` (resource server) y `cooponboard-spa` (público+PKCE).
+2. Definir client roles (`customer:read/write/admin`) y scopes (`customers:read`, …).
+3. Agregar un **Audience mapper** que incluya `cooponboard-api` en el `aud`.
+4. Proteger endpoints con `@RolesAllowed` / `@Authenticated` / `@ScopesAllowed`.
+
+Mientras los clients no existan, la API arranca pero las rutas protegidas
 rechazarán las peticiones.
 
 ---
@@ -215,11 +229,11 @@ rechazarán las peticiones.
 ./mvnw quarkus:dev
 ```
 
-> Quarkus incluye una Dev UI disponible solo en modo dev en <http://localhost:8080/q/dev/>.
+> Quarkus incluye una Dev UI disponible solo en modo dev en <http://localhost:8090/q/dev/>.
 
 En modo dev local, el datasource ya apunta a `localhost:5432` mediante el perfil
 `%dev` en `src/main/resources/application.yml` (en el contenedor, el compose lo
-sobreescribe con el nombre de contenedor `itilsupport_postgres`).
+sobreescribe con el nombre de contenedor `shared_postgres`).
 
 ### Empaquetado
 

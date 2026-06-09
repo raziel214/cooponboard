@@ -17,7 +17,7 @@ quarkus:
     name: cooponboard
 
   http:
-    port: 8080
+    port: 8090
 
   # --- OpenAPI / Swagger UI (extension quarkus-smallrye-openapi) ---
   # Spec:       /q/openapi      UI: /q/swagger-ui
@@ -38,9 +38,12 @@ quarkus:
       generation: update
 
   # --- Seguridad: OIDC contra Keycloak (modo service = valida JWT Bearer) ---
+  # Realm = ambiente (dev). cooponboard-api = resource server / audience.
   oidc:
     application-type: service
-    client-id: cooponboard
+    client-id: cooponboard-api
+    token:
+      audience: cooponboard-api   # exige que el JWT lleve aud=cooponboard-api
   # Usamos nuestro Keycloak, no el Dev Service automatico
   keycloak:
     devservices:
@@ -68,9 +71,9 @@ quarkus:
   quarkus:
     datasource:
       jdbc:
-        url: jdbc:postgresql://localhost:5432/itilsupport
+        url: jdbc:postgresql://localhost:5432/cooponboard
     oidc:
-      auth-server-url: http://localhost:8081/realms/cooponboard
+      auth-server-url: http://localhost:8081/realms/internos-dev
     minio:
       url: http://localhost:9000
     vault:

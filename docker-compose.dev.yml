@@ -4,7 +4,7 @@ version: '3.8'
 # DEVELOPMENT - cooponboard (API Quarkus)
 # ------------------------------------------------------------
 # Servicios de infraestructura (composes aparte, repo itilsupport):
-#   - PostgreSQL : itilsupport_postgres  (carpeta Postgres/)
+#   - PostgreSQL : shared_postgres  (carpeta Postgres/)
 #   - Keycloak   : itilsupport_keycloak  (carpeta Keycloak/)
 #   - Vault      : vault-server          (carpeta Vault/)
 #   - MinIO      : minio-server          (carpeta Minio/)
@@ -34,10 +34,10 @@ services:
 
       # --- HTTP ---
       QUARKUS_HTTP_HOST: 0.0.0.0
-      QUARKUS_HTTP_PORT: 8080
+      QUARKUS_HTTP_PORT: 8090
 
       # --- Datasource PostgreSQL (SOLO la URL; credenciales via Vault) ---
-      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://itilsupport_postgres:5432/${DB_NAME:-itilsupport}
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://shared_postgres:5432/${DB_NAME:-cooponboard}
       QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION: ${DB_DDL:-update}
 
       # --- Vault: fuente de secretos (Postgres + MinIO) ---
@@ -46,8 +46,8 @@ services:
       VAULT_PASSWORD: ${VAULT_PASSWORD:?VAULT_PASSWORD es requerido (ver .env)}
 
       # --- Keycloak / OIDC (modo service: valida JWT Bearer) ---
-      QUARKUS_OIDC_AUTH_SERVER_URL: http://itilsupport_keycloak:8080/realms/${OIDC_REALM:-cooponboard}
-      QUARKUS_OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-cooponboard}
+      QUARKUS_OIDC_AUTH_SERVER_URL: http://itilsupport_keycloak:8080/realms/${OIDC_REALM:-internos-dev}
+      QUARKUS_OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-cooponboard-api}
 
       # --- MinIO (url aqui; access-key/secret-key via Vault) ---
       QUARKUS_MINIO_URL: http://minio-server:9000
@@ -56,7 +56,7 @@ services:
       JAVA_DEBUG: "true"
       JAVA_DEBUG_PORT: "*:5005"
     ports:
-      - "${APP_PORT:-8082}:8080"   # 8080 lo ocupa itilsupport_backend_dev
+      - "${APP_PORT:-8090}:8090"   # 8080/8081 ocupados; 8090 libre
       - "${DEBUG_PORT:-5006}:5005" # 5005 lo ocupa itilsupport_backend_dev
     networks:
       - itilsupport_network_dev
