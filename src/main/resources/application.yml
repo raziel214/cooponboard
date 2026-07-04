@@ -24,15 +24,17 @@ quarkus:
   smallrye-openapi:
     info-title: cooponboard API
     info-version: 1.0.0-SNAPSHOT
-    info-description: API de onboarding del ecosistema itilsupport.
+    info-description: API de onboarding del ecosistema CRM.
     info-contact-name: John Fredy Quimbaya Orozco
-    info-contact-url: https://www.linkedin.com/in/jfqo/
+    info-contact-url: https://raziel214.github.io/portfolio/
   swagger-ui:
     always-include: true   # tambien disponible en prod (no solo en dev)
 
   # --- Persistencia PostgreSQL (credenciales via Vault) ---
   datasource:
     db-kind: postgresql
+    username: ${DB_USERNAME:cooponboard}
+    password: ${DB_PASSWORD:cooponboard}
   hibernate-orm:
     database:
       generation: update
@@ -51,6 +53,8 @@ quarkus:
 
   # --- MinIO (url aqui; access-key/secret-key via Vault) ---
   # quarkus.minio.url se define por perfil/entorno mas abajo.
+  minio:
+    bucket: onboarding-documents
 
   # --- Vault: fuente de secretos ---
   vault:
@@ -59,8 +63,28 @@ quarkus:
     secret-config-kv-path: dev/cooponboard/app
     authentication:
       userpass:
-        username: ${VAULT_USERNAME:cooponboard}
+        username: ${VAULT_USERNAME:cooponboard-app}
         password: ${VAULT_PASSWORD:}   # sin default; viene de .env / entorno
+
+  # --- Observabilidad y Metricas ---
+  micrometer:
+    export:
+      prometheus:
+        enabled: true
+  otel:
+    exporter:
+      otlp:
+        endpoint: http://localhost:4317
+
+  # --- Logging ---
+  log:
+    console:
+      enable: true
+      format: "%d{yyyy-MM-dd HH:mm:ss,SSS} %-5p [%c{2.}] (%t) %s%e%n"
+    level: INFO
+    category:
+      "com.quimbaya.cooponboard":
+        level: DEBUG
 
 # ------------------------------------------------------------
 # DEV local ('mvnw quarkus:dev' corre en el host -> localhost).
@@ -78,3 +102,7 @@ quarkus:
       url: http://localhost:9000
     vault:
       url: http://localhost:8200
+    otel:
+      sdk:
+        disabled: true # Deshabilitar OpenTelemetry en DEV para evitar errores si Collector no corre
+

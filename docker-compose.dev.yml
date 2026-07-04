@@ -21,12 +21,12 @@ version: '3.8'
 
 services:
 
-  cooponboard:
+  coop-customer-onboarding:
     build:
       context: .
       dockerfile: src/main/docker/Dockerfile.jvm
     image: cooponboard:dev
-    container_name: cooponboard_dev
+    container_name: coop-customer-onboarding-dev
     restart: unless-stopped
     environment:
       # --- Perfil ---
@@ -42,8 +42,8 @@ services:
 
       # --- Vault: fuente de secretos (Postgres + MinIO) ---
       QUARKUS_VAULT_URL: http://vault-server:8200
-      VAULT_USERNAME: ${VAULT_USERNAME:-cooponboard}
-      VAULT_PASSWORD: ${VAULT_PASSWORD:?VAULT_PASSWORD es requerido (ver .env)}
+      VAULT_USERNAME: ${VAULT_USERNAME:-cooponboard-app}
+      VAULT_PASSWORD: ${VAULT_PASSWORD:-Taylor.123}
 
       # --- Keycloak / OIDC (modo service: valida JWT Bearer) ---
       QUARKUS_OIDC_AUTH_SERVER_URL: http://itilsupport_keycloak:8080/realms/${OIDC_REALM:-internos-dev}

@@ -22,6 +22,14 @@
 # 4) Re-incluir ejecutable nativo (Dockerfile.native / native-micro)
 !target/*-runner
 
+# 5) Re-incluir código fuente y maven wrapper para compilación multi-etapa
+!src/
+!src/**
+!pom.xml
+!mvnw
+!.mvn/
+!.mvn/**
+
 # ------------------------------------------------------------
 # Por seguridad, nunca enviar secretos al contexto aunque
 # alguna regla anterior los re-incluyera.
