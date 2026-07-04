@@ -1,4 +1,4 @@
-# BIAN Alignment - Customer Onboarding (cooponboard)
+# BIAN Alignment - Customer Onboarding (coop-customer-onboarding)
 
 This microservice aligns with the **Customer Onboarding** service domain as defined by the Banking Industry Architecture Network (BIAN).
 

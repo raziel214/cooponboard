@@ -1,6 +1,6 @@
-# Dependencies Manifesto - cooponboard
+# Dependencies Manifesto - coop-customer-onboarding
 
-This document lists the third-party libraries and frameworks used by `cooponboard`, along with their versions and licensing info.
+This document lists the third-party libraries and frameworks used by `coop-customer-onboarding`, along with their versions and licensing info.
 
 ## Internal Dependencies (Quarkus Platform)
 These dependencies inherit their versions from `quarkus-bom:3.36.0` (Apache License 2.0).
