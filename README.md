@@ -10,7 +10,7 @@ todos orquestados con Docker Compose sobre una red común.
 ## Arquitectura
 
 ```
-                         red docker: itilsupport_network_dev
+                         red docker: microservices-dev-network
    ┌───────────────────────────────────────────────────────────────────────┐
    │                                                                         │
    │   ┌──────────────┐        ┌──────────────────┐      ┌───────────────┐  │
@@ -67,7 +67,7 @@ proyecto solo aporta el código de la API; cada componente externo conserva su
 
 ### Modelo de red
 
-Todos los servicios comparten la red Docker externa **`itilsupport_network_dev`**.
+Todos los servicios comparten la red Docker externa **`microservices-dev-network`**.
 Gracias a esto, `cooponboard` resuelve a sus dependencias **por nombre de
 contenedor** (DNS interno de Docker), sin depender de `host.docker.internal`:
 
@@ -134,7 +134,7 @@ cooponboard/
 
 ```bash
 # 0. (una sola vez) crear la red compartida si no existe
-docker network create itilsupport_network_dev
+docker network create microservices-dev-network
 
 # 1. Infraestructura (en el repo itilsupport)
 cd itilsupport/Postgres && cp .env.example .env && docker compose up -d
